@@ -4,6 +4,7 @@ _G.WatermarkSettings = {
     DisabledPlaceIds = {123, 456, 789},
     Title = "Space Hub",
     Accent = "#BB66FF",
+    SecondAccent = "#7A5CFF",
     ShowFPS = true,
     ShowPing = true,
     ShowRuntime = true,
@@ -16,7 +17,9 @@ _G.WatermarkSettings = {
         end
     }
 }
+
 loadstring(game:HttpGet("https://raw.githubusercontent.com/Space-RB/Hub/refs/heads/main/Utility/Watermark.lua"))()
+
 _G.WatermarkObject:Refresh()
 _G.WatermarkObject:SetCustom("Level", 25)
 _G.WatermarkObject:SetCustom("Mode", "Auto Farm")
@@ -28,6 +31,21 @@ _G.WatermarkObject:SetCustom("Coins", function()
     return coins
 end)
 coins = coins + 10
+_G.WatermarkEnable()
+_G.WatermarkDisable()
+_G.WatermarkToggle()
+print(_G.WatermarkEnabled())
+_G.WatermarkRefresh()
+_G.WatermarkEnable()
+_G.WatermarkDisable()
+_G.WatermarkToggle()
+print(_G.WatermarkEnabled())
+_G.WatermarkRefresh()
+_G.WatermarkObject:SetCustom("Balls", "x")
+_G.WatermarkObject:SetCustom("Coins", function()
+    return 1250
+end)
+_G.WatermarkObject:SetCustom("Coins", nil)
 ]]
 
 _G.WatermarkSettings = {
@@ -35,6 +53,7 @@ _G.WatermarkSettings = {
     DisabledPlaceIds = {123, 456, 789},
     Title = "Space Hub",
     Accent = "#BB66FF",
+    SecondAccent = "#7A5CFF",
     ShowFPS = true,
     ShowPing = true,
     ShowRuntime = true,
@@ -44,6 +63,8 @@ _G.WatermarkSettings = {
 if not _G.WatermarkSettings then
     _G.WatermarkSettings = {}
 end
+
+_G.WatermarkVisible = _G.WatermarkVisible ~= false
 
 local Settings = _G.WatermarkSettings
 
@@ -58,7 +79,7 @@ Settings.ShowFPS = Settings.ShowFPS ~= false
 Settings.ShowPing = Settings.ShowPing ~= false
 Settings.ShowRuntime = Settings.ShowRuntime ~= false
 
-Settings.Position = Settings.Position or UDim2.new(1, -5, 0, -5)
+Settings.Position = Settings.Position or UDim2.new(1, -8, 0, -15)
 Settings.Height = Settings.Height or 34
 Settings.TextSize = Settings.TextSize or 14
 Settings.CustomValues = Settings.CustomValues or {}
@@ -74,10 +95,12 @@ local LocalPlayer = Players.LocalPlayer
 local function RandomString(len)
     local chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     local out = ""
+
     for i = 1, len or 12 do
         local r = math.random(1, #chars)
         out = out .. chars:sub(r, r)
     end
+
     return out
 end
 
@@ -107,9 +130,11 @@ local function SafeCall(value)
         end
         return "error"
     end
+
     if value == nil then
         return nil
     end
+
     return tostring(value)
 end
 
@@ -139,11 +164,12 @@ function Watermark:SetCustom(name, value)
     else
         Settings.CustomValues[name] = value
     end
+
     self:Refresh()
 end
 
 function Watermark:Refresh()
-    if not self.TextLabel or not self.Main then
+    if not self.TextLabel or not self.Main or not self.Glow or not self.Holder then
         return
     end
 
@@ -182,10 +208,15 @@ function Watermark:Refresh()
     local targetWidth = textSize.X + 28
     self.Main.Size = UDim2.new(0, targetWidth, 0, Settings.Height)
     self.Glow.Size = UDim2.new(0, targetWidth + 12, 0, Settings.Height + 10)
+    self.Holder.Size = UDim2.new(0, targetWidth + 12, 0, Settings.Height + 10)
 end
 
 local function CreateWatermark()
     if not Settings.Enabled then
+        return nil
+    end
+
+    if not _G.WatermarkVisible then
         return nil
     end
 
@@ -219,7 +250,7 @@ local function CreateWatermark()
     Holder.BackgroundTransparency = 1
     Holder.AnchorPoint = Vector2.new(1, 0)
     Holder.Position = Settings.Position
-    Holder.Size = UDim2.new(0, 220, 0, Settings.Height + 10)
+    Holder.Size = UDim2.new(0, 232, 0, Settings.Height + 10)
     Holder.Parent = ScreenGui
     self.Holder = Holder
 
@@ -361,10 +392,59 @@ local function CreateWatermark()
     return self
 end
 
+local function DestroyWatermark()
+    if _G.WatermarkObject then
+        _G.WatermarkObject:Destroy()
+        _G.WatermarkObject = nil
+    end
+end
+
+local function EnableWatermark()
+    _G.WatermarkVisible = true
+    Settings.Enabled = true
+    DestroyWatermark()
+    _G.WatermarkObject = CreateWatermark()
+    return _G.WatermarkObject
+end
+
+local function DisableWatermark()
+    _G.WatermarkVisible = false
+    Settings.Enabled = false
+    DestroyWatermark()
+end
+
+local function ToggleWatermark()
+    if _G.WatermarkObject and _G.WatermarkObject.Gui then
+        DisableWatermark()
+        return false
+    else
+        EnableWatermark()
+        return true
+    end
+end
+
+local function WatermarkEnabled()
+    return _G.WatermarkObject ~= nil and _G.WatermarkObject.Gui ~= nil
+end
+
+local function RefreshWatermark()
+    if _G.WatermarkObject then
+        _G.WatermarkObject:Refresh()
+    end
+end
+
 if _G.WatermarkObject then
     _G.WatermarkObject:Destroy()
     _G.WatermarkObject = nil
 end
 
 _G.Watermark = CreateWatermark
-_G.WatermarkObject = CreateWatermark()
+_G.WatermarkEnable = EnableWatermark
+_G.WatermarkDisable = DisableWatermark
+_G.WatermarkToggle = ToggleWatermark
+_G.WatermarkEnabled = WatermarkEnabled
+_G.WatermarkRefresh = RefreshWatermark
+
+if Settings.Enabled and _G.WatermarkVisible and not IsDisabledPlace() then
+    _G.WatermarkObject = CreateWatermark()
+end
