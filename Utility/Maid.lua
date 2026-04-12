@@ -1,7 +1,7 @@
 local Maid = {};
 Maid.__index = Maid;
 
-local function cleanupTask(task);
+local function cleanupTask(task)
     if task == nil then
         return;
     end;
@@ -15,13 +15,9 @@ local function cleanupTask(task);
             task:Disconnect();
         end;
     elseif taskType == "Instance" then
-        if task.Parent ~= nil then
+        pcall(function()
             task:Destroy();
-        else
-            pcall(function()
-                task:Destroy();
-            end);
-        end;
+        end);
     elseif taskType == "thread" then
         if coroutine.status(task) ~= "dead" then
             pcall(coroutine.close, task);
@@ -47,47 +43,49 @@ local function cleanupTask(task);
             task:cancel();
         end;
     end;
-end;
+end
 
-function Maid.new();
+function Maid.new()
     return setmetatable({
         _tasks = {};
         _features = {};
         _indices = {};
     }, Maid);
-end;
+end
 
-function Maid:_track(task, feature);
+function Maid:_track(task, feature)
     assert(task ~= nil, "Task cannot be nil");
 
     table.insert(self._tasks, task);
 
     if feature ~= nil then
         assert(type(feature) == "string" or type(feature) == "number", "Feature must be a string or number");
+
         local bucket = self._features[feature];
         if not bucket then
             bucket = {};
             self._features[feature] = bucket;
         end;
+
         table.insert(bucket, task);
     end;
 
     return task;
-end;
+end
 
-function Maid:AddTask(task, feature);
+function Maid:AddTask(task, feature)
     return self:_track(task, feature);
-end;
+end
 
-function Maid:Add(task);
+function Maid:Add(task)
     return self:_track(task);
-end;
+end
 
-function Maid:GiveTask(task);
+function Maid:GiveTask(task)
     return self:_track(task);
-end;
+end
 
-function Maid:GivePromise(promise);
+function Maid:GivePromise(promise)
     assert(promise ~= nil, "Promise cannot be nil");
 
     if promise.Status == "Rejected" or promise.Status == "Resolved" then
@@ -101,9 +99,9 @@ function Maid:GivePromise(promise);
 
     self:_track(connection);
     return promise;
-end;
+end
 
-function Maid:__newindex(index, task);
+function Maid:__newindex(index, task)
     local oldTask = rawget(self._indices, index);
 
     if oldTask ~= nil then
@@ -117,17 +115,17 @@ function Maid:__newindex(index, task);
 
     rawset(self._indices, index, task);
     self:_track(task);
-end;
+end
 
-function Maid:__index(index);
+function Maid:__index(index)
     if Maid[index] then
         return Maid[index];
     end;
 
     return rawget(self._indices, index);
-end;
+end
 
-function Maid:Remove(task);
+function Maid:Remove(task)
     if task == nil then
         return false;
     end;
@@ -166,9 +164,9 @@ function Maid:Remove(task);
     end;
 
     return removed;
-end;
+end
 
-function Maid:Cleanup(feature);
+function Maid:Cleanup(feature)
     if feature ~= nil then
         assert(type(feature) == "string" or type(feature) == "number", "Feature must be a string or number");
 
@@ -209,18 +207,18 @@ function Maid:Cleanup(feature);
     table.clear(self._tasks);
     table.clear(self._features);
     table.clear(self._indices);
-end;
+end
 
-function Maid:Clean();
+function Maid:Clean()
     self:Cleanup();
-end;
+end
 
-function Maid:DoCleaning();
+function Maid:DoCleaning()
     self:Cleanup();
-end;
+end
 
-function Maid:Destroy();
+function Maid:Destroy()
     self:Cleanup();
-end;
+end
 
 return Maid;
