@@ -1,7 +1,7 @@
 local Services = {};
 local VirtualInputManager = getvirtualinputmanager and getvirtualinputmanager();
 
-function Services:Get(...);
+function Services:Get(...)
     local count = select("#", ...);
     local result = table.create(count);
 
@@ -10,10 +10,10 @@ function Services:Get(...);
     end;
 
     return table.unpack(result, 1, count);
-end;
+end
 
 setmetatable(Services, {
-    __index = function(self, key);
+    __index = function(self, key)
         if key == "VirtualInputManager" then
             return VirtualInputManager;
         elseif key == "CurrentCamera" then
