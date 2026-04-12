@@ -11,26 +11,26 @@ for _, name in ipairs(METAMETHOD_NAMES) do
     METAMETHOD_LOOKUP[name] = true;
 end;
 
-local function indent(level);
+local function indent(level)
     return string.rep("  ", tonumber(level) or 0);
-end;
+end
 
-local function escapeString(value);
+local function escapeString(value)
     return "\"" .. tostring(value)
         :gsub("\\", "\\\\")
         :gsub("\"", "\\\"")
         :gsub("\n", "\\n")
         :gsub("\r", "\\r")
         :gsub("\t", "\\t") .. "\"";
-end;
+end
 
-local function sortedKeys(tbl);
+local function sortedKeys(tbl)
     local keys = {};
     for key in pairs(tbl) do
         keys[#keys + 1] = key;
     end;
 
-    table.sort(keys, function(a, b);
+    table.sort(keys, function(a, b)
         local ta, tb = typeof(a), typeof(b);
         if ta == tb then
             if ta == "number" then
@@ -42,9 +42,9 @@ local function sortedKeys(tbl);
     end);
 
     return keys;
-end;
+end
 
-local function recreateFunction(func);
+local function recreateFunction(func)
     local ok, info = pcall(debug.getinfo, func, "un");
     if not ok or not info then
         return "function(...) end";
@@ -61,26 +61,26 @@ local function recreateFunction(func);
 
     local name = info.name or "function";
     return name .. "(" .. table.concat(params, ", ") .. ")";
-end;
+end
 
-local function isService(instance);
+local function isService(instance)
     if typeof(instance) ~= "Instance" then
         return false;
     end;
 
-    local ok, service = pcall(function();
+    local ok, service = pcall(function()
         return game:GetService(instance.ClassName);
     end);
 
     return ok and service == instance;
-end;
+end
 
-local function formatInstance(instance);
+local function formatInstance(instance)
     if isService(instance) then
         return ("game:GetService(%q)"):format(instance.ClassName);
     end;
 
-    local ok, fullName = pcall(function();
+    local ok, fullName = pcall(function()
         return instance:GetFullName();
     end);
 
@@ -89,9 +89,9 @@ local function formatInstance(instance);
     end;
 
     return "nil";
-end;
+end
 
-local function formatCFrame(cf);
+local function formatCFrame(cf)
     local components = table.pack(cf:GetComponents());
     local out = table.create(components.n);
 
@@ -100,9 +100,9 @@ local function formatCFrame(cf);
     end;
 
     return "CFrame.new(" .. table.concat(out, ", ") .. ")";
-end;
+end
 
-local function formatRobloxValue(value);
+local function formatRobloxValue(value)
     local t = typeof(value);
 
     if t == "Vector3" then
@@ -132,9 +132,9 @@ local function formatRobloxValue(value);
     end;
 
     return nil;
-end;
+end
 
-local function formatMetamethod(value, level, visited);
+local function formatMetamethod(value, level, visited)
     local t = typeof(value);
 
     if t == "function" then
@@ -145,9 +145,9 @@ local function formatMetamethod(value, level, visited);
         local robloxFormatted = formatRobloxValue(value);
         return robloxFormatted or tostring(value);
     end;
-end;
+end
 
-function Serializer._formatValue(value, level, visited);
+function Serializer._formatValue(value, level, visited)
     level = tonumber(level) or 0;
     visited = visited or {};
 
@@ -225,12 +225,12 @@ function Serializer._formatValue(value, level, visited);
     visited[value] = nil;
 
     return table.concat(parts);
-end;
+end
 
-function Serializer:Serialize(tbl, level);
+function Serializer:Serialize(tbl, level)
     assert(typeof(tbl) == "table", "Serialize expects a table");
     return self._formatValue(tbl, level or 0, {});
-end;
+end
 
 getgenv().serializer = Serializer;
 return Serializer;
