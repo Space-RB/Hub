@@ -13,7 +13,7 @@ local RunService = game:GetService("RunService");
 
 local function output(func, msg)
 	func(((func == error and "SimplePath Error: ") or "SimplePath: ") .. msg);
-end;
+end
 
 local Path = {
 	StatusType = {
@@ -53,7 +53,7 @@ local function declareError(self, errorType)
 	if self._events and self._events.Error then
 		self._events.Error:Fire(errorType);
 	end;
-end;
+end
 
 local function destroyVisualWaypoints(waypoints)
 	if waypoints then
@@ -64,7 +64,7 @@ local function destroyVisualWaypoints(waypoints)
 		end;
 	end;
 	return nil;
-end;
+end
 
 local function isAgentAlive(self)
 	if not self._agent or not self._agent.Parent then
@@ -80,32 +80,32 @@ local function isAgentAlive(self)
 	end;
 
 	return true;
-end;
+end
 
 local function getTargetPosition(target)
 	return typeof(target) == "Vector3" and target or target.Position;
-end;
+end
 
 local function disconnectMoveConnection(self)
 	if self._moveConnection then
 		self._moveConnection:Disconnect();
 		self._moveConnection = nil;
 	end;
-end;
+end
 
 local function disconnectStuckConnection(self)
 	if self._stuckDetectConnection then
 		self._stuckDetectConnection:Disconnect();
 		self._stuckDetectConnection = nil;
 	end;
-end;
+end
 
 local function disconnectDiedConnection(self)
 	if self._diedConnection then
 		self._diedConnection:Disconnect();
 		self._diedConnection = nil;
 	end;
-end;
+end
 
 local function hardStopHumanoid(self)
 	if self._humanoid and self._humanoid.Parent and self._agent and self._agent.PrimaryPart then
@@ -113,7 +113,7 @@ local function hardStopHumanoid(self)
 			self._humanoid:MoveTo(self._agent.PrimaryPart.Position);
 		end);
 	end;
-end;
+end
 
 local function cleanupRun(self, fireStopped)
 	disconnectMoveConnection(self);
@@ -128,7 +128,7 @@ local function cleanupRun(self, fireStopped)
 	if fireStopped and self._events and self._events.Stopped then
 		self._events.Stopped:Fire(self._agent);
 	end;
-end;
+end
 
 local function createVisualWaypoints(waypoints)
 	local visualWaypoints = {};
@@ -164,7 +164,7 @@ local function createVisualWaypoints(waypoints)
 	end;
 
 	return visualWaypoints;
-end;
+end
 
 local function getNonHumanoidWaypoint(self)
 	for i = 2, #self._waypoints do
@@ -173,7 +173,7 @@ local function getNonHumanoidWaypoint(self)
 		end;
 	end;
 	return 2;
-end;
+end
 
 local function setJumpState(self)
 	if not self._humanoid or self._humanoid.Health <= 0 then
@@ -186,13 +186,13 @@ local function setJumpState(self)
 			self._humanoid:ChangeState(Enum.HumanoidStateType.Jumping);
 		end;
 	end);
-end;
+end
 
 local function invokeWaypointReached(self)
 	local lastWaypoint = self._waypoints[self._currentWaypoint - 1];
 	local nextWaypoint = self._waypoints[self._currentWaypoint];
 	self._events.WaypointReached:Fire(self._agent, lastWaypoint, nextWaypoint);
-end;
+end
 
 local function move(self)
 	if not isAgentAlive(self) then
@@ -211,7 +211,7 @@ local function move(self)
 	end;
 
 	self._humanoid:MoveTo(waypoint.Position);
-end;
+end
 
 local function moveToFinished(self, reached)
 	if not getmetatable(self) then
@@ -254,7 +254,7 @@ local function moveToFinished(self, reached)
 		cleanupRun(self, false);
 		declareError(self, self.ErrorType.TargetUnreachable);
 	end;
-end;
+end
 
 local function checkForStuck(self)
 	if not self._humanoid or self._status ~= Path.StatusType.Active then
@@ -300,7 +300,7 @@ local function checkForStuck(self)
 			end;
 		end;
 	end;
-end;
+end
 
 function Path.GetNearestCharacter(fromPosition)
 	local character, dist = nil, math.huge;
@@ -317,7 +317,7 @@ function Path.GetNearestCharacter(fromPosition)
 	end;
 
 	return character;
-end;
+end
 
 function Path.new(agent, agentParameters, override)
 	if not (agent and agent:IsA("Model") and agent.PrimaryPart) then
@@ -377,7 +377,7 @@ function Path.new(agent, agentParameters, override)
 	end;
 
 	return self;
-end;
+end
 
 function Path:Destroy()
 	if self._events then
@@ -402,7 +402,7 @@ function Path:Destroy()
 	for k in pairs(self) do
 		self[k] = nil;
 	end;
-end;
+end
 
 function Path:Stop()
 	if not self._humanoid then
@@ -417,7 +417,7 @@ function Path:Stop()
 	hardStopHumanoid(self);
 	cleanupRun(self, true);
 	return true;
-end;
+end
 
 function Path:GetPath(target)
 	if not (target and (typeof(target) == "Vector3" or target:IsA("BasePart"))) then
@@ -446,7 +446,7 @@ function Path:GetPath(target)
 	end;
 
 	return waypoints;
-end;
+end
 
 function Path:Run(target, bypassRateLimit)
 	if not target and not self._humanoid and self._target then
@@ -534,6 +534,6 @@ function Path:Run(target, bypassRateLimit)
 	end;
 
 	return true;
-end;
+end
 
 return Path;
