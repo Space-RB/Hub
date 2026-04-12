@@ -1,3 +1,25 @@
+--[[ Example to create
+_G.WatermarkSettings = {
+    Enabled = true,
+    DisabledPlaceIds = {123, 456, 789},
+    Title = "Space Hub",
+    Accent = "#BB66FF",
+    ShowFPS = true,
+    ShowPing = true,
+    ShowRuntime = true,
+    CustomValues = {
+        ["Balls"] = function()
+            return "x"
+        end,
+        ["Coins"] = function()
+            return math.random(1, 999)
+        end
+    }
+}
+
+loadstring(game:HttpGet("https://raw.githubusercontent.com/Space-RB/Hub/refs/heads/main/Utility/Watermark.lua"))()
+]]
+
 if not _G.WatermarkSettings then
     _G.WatermarkSettings = {}
 end
