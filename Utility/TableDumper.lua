@@ -1,19 +1,19 @@
 local TableDumper = {};
 
-local function escapeString(value);
+local function escapeString(value)
     return "\"" .. tostring(value)
         :gsub("\\", "\\\\")
         :gsub("\n", "\\n")
         :gsub("\r", "\\r")
         :gsub("\t", "\\t")
         :gsub("\"", "\\\"") .. "\"";
-end;
+end
 
-local function isIdentifier(value);
+local function isIdentifier(value)
     return type(value) == "string" and value:match("^[%a_][%w_]*$") ~= nil;
-end;
+end
 
-local function formatInstance(instance);
+local function formatInstance(instance)
     local ok, fullName = pcall(function()
         return instance:GetFullName();
     end);
@@ -23,9 +23,9 @@ local function formatInstance(instance);
     end;
 
     return "Instance";
-end;
+end
 
-local function robloxSolve(value);
+local function robloxSolve(value)
     if not typeof then
         return nil;
     end;
@@ -117,9 +117,9 @@ local function robloxSolve(value);
     end;
 
     return nil;
-end;
+end
 
-function TableDumper.solve(value);
+function TableDumper.solve(value)
     local luaType = type(value);
 
     if luaType == "string" then
@@ -139,9 +139,9 @@ function TableDumper.solve(value);
 
     local robloxValue = robloxSolve(value);
     return robloxValue or tostring(value);
-end;
+end
 
-local function getSortedKeys(tbl);
+local function getSortedKeys(tbl)
     local keys = {};
 
     for key in pairs(tbl) do
@@ -163,9 +163,9 @@ local function getSortedKeys(tbl);
     end);
 
     return keys;
-end;
+end
 
-local function isArray(tbl);
+local function isArray(tbl)
     local maxIndex = 0;
     local count = 0;
 
@@ -186,12 +186,12 @@ local function isArray(tbl);
     end;
 
     return true, maxIndex;
-end;
+end
 
-function TableDumper.dump(tbl, depth);
+function TableDumper.dump(tbl, depth)
     depth = depth or 3;
 
-    local function dumpInternal(value, currentDepth, visited);
+    local function dumpInternal(value, currentDepth, visited)
         if currentDepth > depth then
             return "...";
         end;
@@ -246,9 +246,9 @@ function TableDumper.dump(tbl, depth);
         visited[value] = nil;
 
         return table.concat(parts, "\n");
-    end;
+    end
 
     return dumpInternal(tbl, 0, {});
-end;
+end
 
 return TableDumper;
