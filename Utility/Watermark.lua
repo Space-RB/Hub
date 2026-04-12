@@ -16,9 +16,30 @@ _G.WatermarkSettings = {
         end
     }
 }
-
 loadstring(game:HttpGet("https://raw.githubusercontent.com/Space-RB/Hub/refs/heads/main/Utility/Watermark.lua"))()
+_G.WatermarkObject:Refresh()
+_G.WatermarkObject:SetCustom("Level", 25)
+_G.WatermarkObject:SetCustom("Mode", "Auto Farm")
+_G.WatermarkObject:SetCustom("User", function()
+    return game.Players.LocalPlayer.Name
+end)
+local coins = 0
+_G.WatermarkObject:SetCustom("Coins", function()
+    return coins
+end)
+coins = coins + 10
 ]]
+
+_G.WatermarkSettings = {
+    Enabled = true,
+    DisabledPlaceIds = {123, 456, 789},
+    Title = "Space Hub",
+    Accent = "#BB66FF",
+    ShowFPS = true,
+    ShowPing = true,
+    ShowRuntime = true,
+    CustomValues = {}
+}
 
 if not _G.WatermarkSettings then
     _G.WatermarkSettings = {}
@@ -31,19 +52,21 @@ Settings.DisabledPlaceIds = Settings.DisabledPlaceIds or {}
 
 Settings.Title = Settings.Title or "Space Hub"
 Settings.Accent = Settings.Accent or "#BB66FF"
+Settings.SecondAccent = Settings.SecondAccent or "#7A5CFF"
 
 Settings.ShowFPS = Settings.ShowFPS ~= false
 Settings.ShowPing = Settings.ShowPing ~= false
 Settings.ShowRuntime = Settings.ShowRuntime ~= false
 
-Settings.Position = Settings.Position or UDim2.new(1, -10, 0, 15)
-Settings.Height = Settings.Height or 32
-Settings.TextSize = Settings.TextSize or 16
+Settings.Position = Settings.Position or UDim2.new(1, -5, 0, -5)
+Settings.Height = Settings.Height or 34
+Settings.TextSize = Settings.TextSize or 14
 Settings.CustomValues = Settings.CustomValues or {}
 
 local CoreGui = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
 local TextService = game:GetService("TextService")
+local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 
 local LocalPlayer = Players.LocalPlayer
@@ -84,6 +107,9 @@ local function SafeCall(value)
         end
         return "error"
     end
+    if value == nil then
+        return nil
+    end
     return tostring(value)
 end
 
@@ -101,15 +127,19 @@ function Watermark:Destroy()
         self.FPSConnection = nil
     end
 
-    if self.Gui and self.Gui.Parent then
+    if self.Gui then
         self.Gui:Destroy()
+        self.Gui = nil
     end
-
-    self.Gui = nil
 end
 
 function Watermark:SetCustom(name, value)
-    Settings.CustomValues[name] = value
+    if value == nil then
+        Settings.CustomValues[name] = nil
+    else
+        Settings.CustomValues[name] = value
+    end
+    self:Refresh()
 end
 
 function Watermark:Refresh()
@@ -121,22 +151,25 @@ function Watermark:Refresh()
     table.insert(parts, string.format('<font color="%s">%s</font>', Settings.Accent, Settings.Title))
 
     if Settings.ShowFPS then
-        table.insert(parts, string.format("%d fps", self.FPS))
+        table.insert(parts, string.format("fps: %d", self.FPS))
     end
 
     if Settings.ShowPing then
-        table.insert(parts, string.format("%d ms", self.Ping))
+        table.insert(parts, string.format("ping: %d", self.Ping))
     end
 
     if Settings.ShowRuntime then
-        table.insert(parts, FormatTime(tick() - self.StartTime))
+        table.insert(parts, string.format("%s", FormatTime(tick() - self.StartTime)))
     end
 
     for name, value in pairs(Settings.CustomValues) do
-        table.insert(parts, string.format("%s: %s", tostring(name), SafeCall(value)))
+        local result = SafeCall(value)
+        if result ~= nil then
+            table.insert(parts, string.format('%s: <font color="%s">%s</font>', tostring(name), Settings.Accent, result))
+        end
     end
 
-    local finalText = table.concat(parts, " | ")
+    local finalText = table.concat(parts, "   |   ")
     self.TextLabel.Text = finalText
 
     local textSize = TextService:GetTextSize(
@@ -146,7 +179,9 @@ function Watermark:Refresh()
         Vector2.new(math.huge, Settings.Height)
     )
 
-    self.Main.Size = UDim2.new(0, textSize.X + 24, 0, Settings.Height)
+    local targetWidth = textSize.X + 28
+    self.Main.Size = UDim2.new(0, targetWidth, 0, Settings.Height)
+    self.Glow.Size = UDim2.new(0, targetWidth + 12, 0, Settings.Height + 10)
 end
 
 local function CreateWatermark()
@@ -164,7 +199,6 @@ local function CreateWatermark()
     end
 
     local self = setmetatable({}, Watermark)
-
     self.StartTime = tick()
     self.FPS = 0
     self.Ping = 0
@@ -174,57 +208,111 @@ local function CreateWatermark()
 
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "WatermarkGui"
-    ScreenGui.ResetOnSpawn = false
-    ScreenGui.DisplayOrder = 10
-    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     ScreenGui.Parent = CoreGui
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.DisplayOrder = 50
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     self.Gui = ScreenGui
+
+    local Holder = Instance.new("Frame")
+    Holder.Name = RandomString()
+    Holder.BackgroundTransparency = 1
+    Holder.AnchorPoint = Vector2.new(1, 0)
+    Holder.Position = Settings.Position
+    Holder.Size = UDim2.new(0, 220, 0, Settings.Height + 10)
+    Holder.Parent = ScreenGui
+    self.Holder = Holder
+
+    local Glow = Instance.new("Frame")
+    Glow.Name = RandomString()
+    Glow.AnchorPoint = Vector2.new(1, 0)
+    Glow.Position = UDim2.new(1, 6, 0, 2)
+    Glow.Size = UDim2.new(0, 232, 0, Settings.Height + 10)
+    Glow.BackgroundColor3 = Color3.fromHex(Settings.Accent)
+    Glow.BackgroundTransparency = 0.86
+    Glow.BorderSizePixel = 0
+    Glow.Parent = Holder
+    self.Glow = Glow
+
+    local GlowCorner = Instance.new("UICorner")
+    GlowCorner.CornerRadius = UDim.new(0, 12)
+    GlowCorner.Parent = Glow
 
     local Main = Instance.new("Frame")
     Main.Name = RandomString()
     Main.AnchorPoint = Vector2.new(1, 0)
-    Main.Position = Settings.Position
+    Main.Position = UDim2.new(1, 0, 0, 5)
     Main.Size = UDim2.new(0, 220, 0, Settings.Height)
-    Main.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
-    Main.BackgroundTransparency = 0.05
+    Main.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+    Main.BackgroundTransparency = 0.08
     Main.BorderSizePixel = 0
-    Main.Parent = ScreenGui
+    Main.Parent = Holder
     self.Main = Main
 
-    local Corner = Instance.new("UICorner")
-    Corner.Name = RandomString()
-    Corner.CornerRadius = UDim.new(0, 8)
-    Corner.Parent = Main
+    local MainCorner = Instance.new("UICorner")
+    MainCorner.CornerRadius = UDim.new(0, 10)
+    MainCorner.Parent = Main
 
     local Stroke = Instance.new("UIStroke")
-    Stroke.Name = RandomString()
     Stroke.Color = Color3.fromHex(Settings.Accent)
-    Stroke.Thickness = 2
-    Stroke.Transparency = 0.15
+    Stroke.Thickness = 1.4
+    Stroke.Transparency = 0.35
     Stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     Stroke.Parent = Main
 
+    local Gradient = Instance.new("UIGradient")
+    Gradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(18, 18, 28)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(26, 22, 38))
+    })
+    Gradient.Rotation = 0
+    Gradient.Parent = Main
+
+    local TopBar = Instance.new("Frame")
+    TopBar.Name = RandomString()
+    TopBar.BackgroundColor3 = Color3.fromHex(Settings.Accent)
+    TopBar.BorderSizePixel = 0
+    TopBar.Size = UDim2.new(1, 0, 0, 2)
+    TopBar.Parent = Main
+
+    local TopBarGradient = Instance.new("UIGradient")
+    TopBarGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromHex(Settings.Accent)),
+        ColorSequenceKeypoint.new(1, Color3.fromHex(Settings.SecondAccent))
+    })
+    TopBarGradient.Parent = TopBar
+
+    local TopBarCorner = Instance.new("UICorner")
+    TopBarCorner.CornerRadius = UDim.new(0, 10)
+    TopBarCorner.Parent = TopBar
+
     local Padding = Instance.new("UIPadding")
-    Padding.Name = RandomString()
     Padding.PaddingLeft = UDim.new(0, 10)
-    Padding.PaddingRight = UDim.new(0, 12)
+    Padding.PaddingRight = UDim.new(0, 10)
     Padding.PaddingTop = UDim.new(0, 5)
     Padding.PaddingBottom = UDim.new(0, 5)
     Padding.Parent = Main
 
     local TextLabel = Instance.new("TextLabel")
     TextLabel.Name = RandomString()
-    TextLabel.Size = UDim2.new(1, 0, 1, 0)
     TextLabel.BackgroundTransparency = 1
-    TextLabel.Text = ""
-    TextLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    TextLabel.Font = Enum.Font.GothamMedium
+    TextLabel.Size = UDim2.new(1, 0, 1, -1)
+    TextLabel.Position = UDim2.new(0, 0, 0, 1)
+    TextLabel.Font = Enum.Font.GothamSemibold
     TextLabel.TextSize = Settings.TextSize
     TextLabel.TextXAlignment = Enum.TextXAlignment.Right
     TextLabel.TextYAlignment = Enum.TextYAlignment.Center
+    TextLabel.TextColor3 = Color3.fromRGB(245, 245, 255)
     TextLabel.RichText = true
+    TextLabel.TextTransparency = 1
+    TextLabel.BackgroundTransparency = 1
     TextLabel.Parent = Main
     self.TextLabel = TextLabel
+
+    Main.BackgroundTransparency = 1
+    Glow.BackgroundTransparency = 1
+    Stroke.Transparency = 1
+    TopBar.BackgroundTransparency = 1
 
     self.FPSConnection = RunService.RenderStepped:Connect(function()
         self.FrameCounter += 1
@@ -249,6 +337,27 @@ local function CreateWatermark()
     end)
 
     self:Refresh()
+
+    TweenService:Create(Main, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        BackgroundTransparency = 0.08
+    }):Play()
+
+    TweenService:Create(Glow, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        BackgroundTransparency = 0.86
+    }):Play()
+
+    TweenService:Create(Stroke, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Transparency = 0.35
+    }):Play()
+
+    TweenService:Create(TopBar, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        BackgroundTransparency = 0
+    }):Play()
+
+    TweenService:Create(TextLabel, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        TextTransparency = 0
+    }):Play()
+
     return self
 end
 
