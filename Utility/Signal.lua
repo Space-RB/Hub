@@ -1,23 +1,23 @@
 local Signal = {};
 Signal.__index = Signal;
 
-function Signal.new();
+function Signal.new()
     return setmetatable({
         _connections = {};
         _waiting = {};
         _destroyed = false;
     }, Signal);
-end;
+end
 
-local function disconnectConnection(connection);
+local function disconnectConnection(connection)
     if connection and not connection._disconnected then
         connection._disconnected = true;
         connection._handler = nil;
         connection._signal = nil;
     end;
-end;
+end
 
-function Signal:Connect(handler);
+function Signal:Connect(handler)
     assert(not self._destroyed, "Cannot connect to destroyed Signal");
     assert(type(handler) == "function", "Handler must be a function");
 
@@ -27,20 +27,20 @@ function Signal:Connect(handler);
         _disconnected = false;
     };
 
-    function connection:Disconnect();
+    function connection:Disconnect()
         disconnectConnection(connection);
-    end;
+    end
 
     table.insert(self._connections, connection);
     return connection;
-end;
+end
 
-function Signal:Once(handler);
+function Signal:Once(handler)
     assert(not self._destroyed, "Cannot connect to destroyed Signal");
     assert(type(handler) == "function", "Handler must be a function");
 
     local connection;
-    connection = self:Connect(function(...);
+    connection = self:Connect(function(...)
         if connection then
             connection:Disconnect();
         end;
@@ -48,9 +48,9 @@ function Signal:Once(handler);
     end);
 
     return connection;
-end;
+end
 
-function Signal:Fire(...);
+function Signal:Fire(...)
     if self._destroyed then
         return;
     end;
@@ -71,9 +71,9 @@ function Signal:Fire(...);
         local thread = table.remove(self._waiting, i);
         task.spawn(thread, table.unpack(args, 1, args.n));
     end;
-end;
+end
 
-function Signal:Wait();
+function Signal:Wait()
     assert(not self._destroyed, "Cannot wait on destroyed Signal");
 
     local thread = coroutine.running();
@@ -81,18 +81,18 @@ function Signal:Wait();
 
     table.insert(self._waiting, thread);
     return coroutine.yield();
-end;
+end
 
-function Signal:DisconnectAll();
+function Signal:DisconnectAll()
     for i = #self._connections, 1, -1 do
         disconnectConnection(self._connections[i]);
         self._connections[i] = nil;
     end;
 
     table.clear(self._connections);
-end;
+end
 
-function Signal:Destroy();
+function Signal:Destroy()
     if self._destroyed then
         return;
     end;
@@ -100,6 +100,6 @@ function Signal:Destroy();
     self._destroyed = true;
     self:DisconnectAll();
     table.clear(self._waiting);
-end;
+end
 
 return Signal;
