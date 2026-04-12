@@ -1,0 +1,558 @@
+if not LPH_OBFUSCATED then
+    LPH_NO_VIRTUALIZE = function(f) return f; end;
+    LPH_JIT = function(f) return f; end;
+    LPH_CRASH = function() while true do end; end;
+end;
+
+local function safeHttpLoad(url)
+    local ok, src = pcall(game.HttpGet, game, url);
+    if not ok or type(src) ~= "string" or src == "" then
+        error("Failed to load module: " .. tostring(url));
+    end;
+
+    local fn, loadErr = loadstring(src);
+    if not fn then
+        error("Failed to compile module from " .. tostring(url) .. "\n" .. tostring(loadErr));
+    end;
+
+    local ok2, result = pcall(fn);
+    if not ok2 then
+        error("Failed to execute module from " .. tostring(url) .. "\n" .. tostring(result));
+    end;
+
+    return result;
+end;
+
+local Maid = safeHttpLoad("https://raw.githubusercontent.com/Space-RB/Hub/refs/heads/main/Utility/Maid.lua");
+local Signal = safeHttpLoad("https://raw.githubusercontent.com/Space-RB/Hub/refs/heads/main/Utility/Signal.lua");
+local Services = safeHttpLoad("https://raw.githubusercontent.com/Space-RB/Hub/refs/heads/main/Utility/Services.lua");
+
+local TweenService, CoreGui, UserInputService, GuiService, RunService = Services:Get(
+    "TweenService",
+    "CoreGui",
+    "UserInputService",
+    "GuiService",
+    "RunService"
+);
+
+local ProtectGui = protectgui or (syn and syn.protect_gui) or function() end;
+local GetHUI = gethui or function() return CoreGui; end;
+
+local NotificationSystem = {};
+NotificationSystem.__index = NotificationSystem;
+
+local SETTINGS = {
+    Padding = 15;
+    Gap = 10;
+    Duration = 5;
+    Width = 350;
+    Height = 100;
+    CornerRadius = 8;
+    ShadowTransparency = 0.5;
+    ShadowColor = Color3.fromRGB(0, 0, 0);
+    MaxNotifications = 15;
+    HighDisplayOrder = 2147483647;
+
+    TweenIn = TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out);
+    TweenOut = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In);
+};
+
+local IS_MOBILE = UserInputService.TouchEnabled and not UserInputService.MouseEnabled and not UserInputService.KeyboardEnabled;
+
+local THEME = {
+    Background = Color3.fromRGB(25, 25, 25);
+    Text = Color3.fromRGB(245, 245, 245);
+    SubText = Color3.fromRGB(200, 200, 200);
+    Divider = Color3.fromRGB(50, 50, 50);
+
+    Types = {
+        Info = {
+            Color = Color3.fromRGB(59, 130, 246);
+            Icon = "ℹ️";
+        };
+        Success = {
+            Color = Color3.fromRGB(34, 197, 94);
+            Icon = "✅";
+        };
+        Warning = {
+            Color = Color3.fromRGB(234, 179, 8);
+            Icon = "⚠️";
+        };
+        Error = {
+            Color = Color3.fromRGB(239, 68, 68);
+            Icon = "❌";
+        };
+    };
+};
+
+local function generateRandomString()
+    local chars = table.create(math.random(8, 16));
+    for i = 1, #chars do
+        chars[i] = string.char(math.random(97, 122));
+    end;
+    return table.concat(chars);
+end;
+
+local Container = Instance.new("ScreenGui");
+Container.Name = generateRandomString();
+Container.ResetOnSpawn = false;
+Container.ZIndexBehavior = Enum.ZIndexBehavior.Sibling;
+Container.DisplayOrder = SETTINGS.HighDisplayOrder;
+Container.Enabled = true;
+
+if IS_MOBILE then
+    Container.IgnoreGuiInset = true;
+    Container.ClipToDeviceSafeArea = false;
+end;
+
+ProtectGui(Container);
+Container.Parent = GetHUI();
+
+local ActiveNotifications = {};
+
+local Notification = {};
+Notification.__index = Notification;
+
+local function createTween(instance, tweenInfo, props)
+    local tween = TweenService:Create(instance, tweenInfo, props);
+    tween:Play();
+    return tween;
+end;
+
+local function safeDisconnect(conn)
+    if conn then
+        conn:Disconnect();
+    end;
+end;
+
+local function getViewportSize()
+    local camera = workspace.CurrentCamera;
+    if not camera then
+        return Vector2.new(1920, 1080);
+    end;
+    return camera.ViewportSize;
+end;
+
+function Notification.new(options)
+    local self = setmetatable({}, Notification);
+
+    self.Type = THEME.Types[options.Type] and options.Type or "Info";
+    self.Title = tostring(options.Title or "Notification");
+    self.Text = tostring(options.Text or "");
+    self.Duration = tonumber(options.Duration) or SETTINGS.Duration;
+    self.Callback = options.Callback;
+
+    self._maid = Maid.new();
+    self.Destroying = Signal.new();
+    self._destroyed = false;
+    self._tweens = {};
+
+    self:_init();
+    return self;
+end;
+
+function Notification:GetScreenSize()
+    local viewport = getViewportSize();
+    local insets = GuiService:GetGuiInset();
+
+    if IS_MOBILE then
+        return viewport.X, viewport.Y;
+    end;
+
+    return viewport.X, viewport.Y - insets.Y;
+end;
+
+function Notification:GetScaledSize()
+    local screenWidth = self:GetScreenSize();
+
+    if IS_MOBILE then
+        local width = math.min(SETTINGS.Width * 1.2, screenWidth * 0.95);
+        local height = SETTINGS.Height * 1.1;
+        return width, height;
+    end;
+
+    local scale = math.min(screenWidth / 1920, 1);
+    local width = math.min(SETTINGS.Width * scale, screenWidth * 0.9);
+    local height = SETTINGS.Height * scale;
+    return width, height;
+end;
+
+function Notification:CalculateTargetPosition()
+    local totalHeight = 0;
+
+    for _, notif in ipairs(ActiveNotifications) do
+        if notif == self then
+            break;
+        end;
+
+        if not notif._destroyed then
+            local _, height = notif:GetScaledSize();
+            totalHeight += height + SETTINGS.Gap;
+        end;
+    end;
+
+    if IS_MOBILE then
+        return UDim2.new(1, -SETTINGS.Padding, 0, SETTINGS.Padding + totalHeight);
+    end;
+
+    return UDim2.new(1, -SETTINGS.Padding, 1, -SETTINGS.Padding - totalHeight);
+end;
+
+function Notification:_trackTween(tween)
+    table.insert(self._tweens, tween);
+    return tween;
+end;
+
+function Notification:_clearTweens()
+    for i = #self._tweens, 1, -1 do
+        local tween = self._tweens[i];
+        pcall(function()
+            tween:Cancel();
+        end);
+        self._tweens[i] = nil;
+    end;
+end;
+
+function Notification:_makeButton(button, callback)
+    self._maid:AddTask(button.Activated:Connect(function()
+        if self._destroyed then
+            return;
+        end;
+        callback();
+    end));
+end;
+
+function Notification:_init()
+    local typeInfo = THEME.Types[self.Type];
+    local width, height = self:GetScaledSize();
+
+    self.Frame = Instance.new("Frame");
+    self.Frame.Name = generateRandomString();
+    self.Frame.Size = UDim2.new(0, width, 0, height);
+    self.Frame.Position = UDim2.new(1, width + SETTINGS.Padding, IS_MOBILE and 0 or 1, SETTINGS.Padding);
+    self.Frame.BackgroundColor3 = THEME.Background;
+    self.Frame.BackgroundTransparency = 0;
+    self.Frame.BorderSizePixel = 0;
+    self.Frame.AnchorPoint = IS_MOBILE and Vector2.new(1, 0) or Vector2.new(1, 1);
+    self.Frame.ClipsDescendants = true;
+    self.Frame.ZIndex = IS_MOBILE and 10000 or 1000;
+    self.Frame.Parent = Container;
+
+    local corner = Instance.new("UICorner");
+    corner.CornerRadius = UDim.new(0, SETTINGS.CornerRadius);
+    corner.Parent = self.Frame;
+
+    local stroke = Instance.new("UIStroke");
+    stroke.Name = generateRandomString();
+    stroke.Transparency = SETTINGS.ShadowTransparency;
+    stroke.Color = SETTINGS.ShadowColor;
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border;
+    stroke.LineJoinMode = Enum.LineJoinMode.Round;
+    stroke.Thickness = 1;
+    stroke.Parent = self.Frame;
+
+    self.AccentBar = Instance.new("Frame");
+    self.AccentBar.Name = generateRandomString();
+    self.AccentBar.Size = UDim2.new(0, 5, 1, -10);
+    self.AccentBar.Position = UDim2.new(0, 5, 0, 5);
+    self.AccentBar.BackgroundColor3 = typeInfo.Color;
+    self.AccentBar.BorderSizePixel = 0;
+    self.AccentBar.ZIndex = self.Frame.ZIndex + 1;
+    self.AccentBar.Parent = self.Frame;
+
+    local accentCorner = Instance.new("UICorner");
+    accentCorner.CornerRadius = UDim.new(0, 3);
+    accentCorner.Parent = self.AccentBar;
+
+    self.IconLabel = Instance.new("TextLabel");
+    self.IconLabel.Name = generateRandomString();
+    self.IconLabel.Size = UDim2.new(0, 24, 0, 24);
+    self.IconLabel.Position = UDim2.new(0, 12, 0, 8);
+    self.IconLabel.BackgroundTransparency = 1;
+    self.IconLabel.Text = typeInfo.Icon;
+    self.IconLabel.Font = Enum.Font.GothamBold;
+    self.IconLabel.TextSize = IS_MOBILE and 20 or 18;
+    self.IconLabel.TextColor3 = typeInfo.Color;
+    self.IconLabel.ZIndex = self.Frame.ZIndex + 1;
+    self.IconLabel.Parent = self.Frame;
+
+    self.TitleLabel = Instance.new("TextLabel");
+    self.TitleLabel.Name = generateRandomString();
+    self.TitleLabel.Size = UDim2.new(1, -70, 0, 24);
+    self.TitleLabel.Position = UDim2.new(0, 40, 0, 8);
+    self.TitleLabel.BackgroundTransparency = 1;
+    self.TitleLabel.Text = self.Title;
+    self.TitleLabel.Font = Enum.Font.GothamSemibold;
+    self.TitleLabel.TextSize = IS_MOBILE and 18 or 16;
+    self.TitleLabel.TextColor3 = THEME.Text;
+    self.TitleLabel.TextXAlignment = Enum.TextXAlignment.Left;
+    self.TitleLabel.TextTruncate = Enum.TextTruncate.AtEnd;
+    self.TitleLabel.ZIndex = self.Frame.ZIndex + 1;
+    self.TitleLabel.Parent = self.Frame;
+
+    self.Divider = Instance.new("Frame");
+    self.Divider.Name = generateRandomString();
+    self.Divider.Size = UDim2.new(1, -20, 0, 1);
+    self.Divider.Position = UDim2.new(0, 10, 0, 36);
+    self.Divider.BackgroundColor3 = THEME.Divider;
+    self.Divider.BorderSizePixel = 0;
+    self.Divider.ZIndex = self.Frame.ZIndex + 1;
+    self.Divider.Parent = self.Frame;
+
+    self.TextLabel = Instance.new("TextLabel");
+    self.TextLabel.Name = generateRandomString();
+    self.TextLabel.Size = UDim2.new(1, -24, 1, -48);
+    self.TextLabel.Position = UDim2.new(0, 12, 0, 40);
+    self.TextLabel.BackgroundTransparency = 1;
+    self.TextLabel.Text = self.Text;
+    self.TextLabel.Font = Enum.Font.Gotham;
+    self.TextLabel.TextSize = IS_MOBILE and 16 or 14;
+    self.TextLabel.TextColor3 = THEME.SubText;
+    self.TextLabel.TextXAlignment = Enum.TextXAlignment.Left;
+    self.TextLabel.TextYAlignment = Enum.TextYAlignment.Top;
+    self.TextLabel.TextWrapped = true;
+    self.TextLabel.ZIndex = self.Frame.ZIndex + 1;
+    self.TextLabel.Parent = self.Frame;
+
+    self.ProgressBar = Instance.new("Frame");
+    self.ProgressBar.Name = generateRandomString();
+    self.ProgressBar.Size = UDim2.new(1, -10, 0, 3);
+    self.ProgressBar.Position = UDim2.new(0, 5, 1, -5);
+    self.ProgressBar.BackgroundColor3 = typeInfo.Color;
+    self.ProgressBar.BorderSizePixel = 0;
+    self.ProgressBar.ZIndex = self.Frame.ZIndex + 1;
+    self.ProgressBar.AnchorPoint = Vector2.new(0, 1);
+    self.ProgressBar.Parent = self.Frame;
+
+    local progressCorner = Instance.new("UICorner");
+    progressCorner.CornerRadius = UDim.new(0, 2);
+    progressCorner.Parent = self.ProgressBar;
+
+    self.CloseButton = Instance.new("TextButton");
+    self.CloseButton.Name = generateRandomString();
+    self.CloseButton.Size = UDim2.new(0, IS_MOBILE and 28 or 20, 0, IS_MOBILE and 28 or 20);
+    self.CloseButton.Position = UDim2.new(1, -(IS_MOBILE and 28 or 20), 0, 8);
+    self.CloseButton.BackgroundTransparency = 1;
+    self.CloseButton.Text = "×";
+    self.CloseButton.Font = Enum.Font.GothamBold;
+    self.CloseButton.TextSize = IS_MOBILE and 20 or 16;
+    self.CloseButton.TextColor3 = THEME.SubText;
+    self.CloseButton.ZIndex = self.Frame.ZIndex + 2;
+    self.CloseButton.Parent = self.Frame;
+
+    self:_makeButton(self.CloseButton, function()
+        self:Destroy();
+    end);
+
+    if self.Callback then
+        self.ClickableArea = Instance.new("TextButton");
+        self.ClickableArea.Name = generateRandomString();
+        self.ClickableArea.Size = UDim2.new(1, 0, 1, 0);
+        self.ClickableArea.BackgroundTransparency = 1;
+        self.ClickableArea.Text = "";
+        self.ClickableArea.ZIndex = self.Frame.ZIndex + 3;
+        self.ClickableArea.Parent = self.Frame;
+
+        self:_makeButton(self.ClickableArea, function()
+            local ok, err = pcall(self.Callback);
+            if not ok then
+                warn("Notification callback error:", err);
+            end;
+            self:Destroy();
+        end);
+    end;
+
+    table.insert(ActiveNotifications, self);
+
+    if #ActiveNotifications > SETTINGS.MaxNotifications then
+        local oldest = ActiveNotifications[1];
+        if oldest and not oldest._destroyed then
+            oldest:Destroy();
+        end;
+    end;
+
+    self:UpdatePositions();
+
+    self:_trackTween(createTween(self.Frame, SETTINGS.TweenIn, {
+        Position = self:CalculateTargetPosition();
+    }));
+
+    self:_trackTween(createTween(
+        self.ProgressBar,
+        TweenInfo.new(self.Duration, Enum.EasingStyle.Linear, Enum.EasingDirection.Out),
+        { Size = UDim2.new(0, 0, 0, 3) }
+    ));
+
+    task.delay(self.Duration, function()
+        if self._destroyed then
+            return;
+        end;
+        self:Destroy();
+    end);
+end;
+
+function Notification:UpdatePositions()
+    local totalHeight = 0;
+
+    for _, notif in ipairs(ActiveNotifications) do
+        if not notif._destroyed and notif.Frame then
+            local _, height = notif:GetScaledSize();
+            notif.Frame.AnchorPoint = IS_MOBILE and Vector2.new(1, 0) or Vector2.new(1, 1);
+
+            local targetPosition;
+            if IS_MOBILE then
+                targetPosition = UDim2.new(1, -SETTINGS.Padding, 0, SETTINGS.Padding + totalHeight);
+            else
+                targetPosition = UDim2.new(1, -SETTINGS.Padding, 1, -SETTINGS.Padding - totalHeight);
+            end;
+
+            notif:_trackTween(createTween(notif.Frame, SETTINGS.TweenIn, {
+                Position = targetPosition;
+            }));
+
+            totalHeight += height + SETTINGS.Gap;
+        end;
+    end;
+end;
+
+function Notification:Destroy()
+    if self._destroyed then
+        return;
+    end;
+
+    self._destroyed = true;
+    self.Destroying:Fire();
+    self:_clearTweens();
+
+    local exitPosition = UDim2.new(1.35, 0, self.Frame.Position.Y.Scale, self.Frame.Position.Y.Offset);
+
+    for _, child in ipairs(self.Frame:GetDescendants()) do
+        if child:IsA("TextLabel") or child:IsA("TextButton") then
+            self:_trackTween(createTween(child, SETTINGS.TweenOut, {
+                TextTransparency = 1;
+            }));
+        elseif child:IsA("Frame") then
+            self:_trackTween(createTween(child, SETTINGS.TweenOut, {
+                BackgroundTransparency = 1;
+            }));
+        elseif child:IsA("UIStroke") then
+            self:_trackTween(createTween(child, SETTINGS.TweenOut, {
+                Transparency = 1;
+            }));
+        end;
+    end;
+
+    local exitTween = self:_trackTween(createTween(self.Frame, SETTINGS.TweenOut, {
+        Position = exitPosition;
+        BackgroundTransparency = 1;
+    }));
+
+    self._maid:AddTask(exitTween.Completed:Connect(function()
+        local index = table.find(ActiveNotifications, self);
+        if index then
+            table.remove(ActiveNotifications, index);
+        end;
+
+        for _, notif in ipairs(ActiveNotifications) do
+            if not notif._destroyed then
+                notif:UpdatePositions();
+                break;
+            end;
+        end;
+
+        if self.Frame then
+            self.Frame:Destroy();
+        end;
+
+        if self.Destroying then
+            self.Destroying:Destroy();
+        end;
+
+        self._maid:Clean();
+    end));
+end;
+
+function NotificationSystem.new()
+    local self = setmetatable({}, NotificationSystem);
+    self._maid = Maid.new();
+
+    self._maid:AddTask(UserInputService:GetPropertyChangedSignal("TouchEnabled"):Connect(function()
+        for _, notif in ipairs(ActiveNotifications) do
+            if notif and not notif._destroyed then
+                notif:UpdatePositions();
+            end;
+        end;
+    end));
+
+    self._maid:AddTask(RunService.RenderStepped:Connect(function()
+        -- на случай смены viewport / rotation
+        if #ActiveNotifications > 0 then
+            for _, notif in ipairs(ActiveNotifications) do
+                if notif and not notif._destroyed then
+                    -- можно было бы делать debounce, но и так нормально
+                end;
+            end;
+        end;
+    end));
+
+    return self;
+end;
+
+function NotificationSystem:Create(options)
+    return Notification.new(options or {});
+end;
+
+function NotificationSystem:Notify(title, message, notificationType, duration, callback)
+    return self:Create({
+        Title = title;
+        Text = message;
+        Type = notificationType or "Info";
+        Duration = duration;
+        Callback = callback;
+    });
+end;
+
+function NotificationSystem:Info(title, message, duration, callback)
+    return self:Notify(title, message, "Info", duration, callback);
+end;
+
+function NotificationSystem:Success(title, message, duration, callback)
+    return self:Notify(title, message, "Success", duration, callback);
+end;
+
+function NotificationSystem:Warning(title, message, duration, callback)
+    return self:Notify(title, message, "Warning", duration, callback);
+end;
+
+function NotificationSystem:Error(title, message, duration, callback)
+    return self:Notify(title, message, "Error", duration, callback);
+end;
+
+function NotificationSystem:ClearAll()
+    for i = #ActiveNotifications, 1, -1 do
+        local notification = ActiveNotifications[i];
+        if notification and not notification._destroyed then
+            notification:Destroy();
+        end;
+    end;
+end;
+
+function NotificationSystem:Destroy()
+    self:ClearAll();
+    self._maid:Clean();
+
+    if Container then
+        Container:Destroy();
+    end;
+end;
+
+--[[local Notifications = NotificationSystem.new();
+Notifications:Info("Information Title", "This is an informational message.", 5);
+Notifications:Success("Success Title", "Operation completed successfully.", 5);
+Notifications:Warning("Warning Title", "This action may cause issues.", 5);
+Notifications:Error("Error Title", "Something went wrong.", 5);
+Notifications:Warning("Clickable Warning", "Click me to trigger callback!", 15, function()
+    print("Notification was clicked!");
+end);]]
+
+return NotificationSystem.new();
