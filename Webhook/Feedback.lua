@@ -1,10 +1,3 @@
-_G.Feedback = loadstring(game:HttpGet("https://your-link/Feedback.lua"))()
-
---[[
-_G.Feedback("Free", "Hello, this is my feedback")
-_G.Feedback("Premium", "Bug in autofarm")
-]]
-
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local MarketplaceService = game:GetService("MarketplaceService")
