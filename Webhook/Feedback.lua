@@ -1,3 +1,10 @@
+_G.Feedback = loadstring(game:HttpGet("https://your-link/Feedback.lua"))()
+
+--[[
+_G.Feedback("Free", "Hello, this is my feedback")
+_G.Feedback("Premium", "Bug in autofarm")
+]]
+
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local MarketplaceService = game:GetService("MarketplaceService")
@@ -88,13 +95,18 @@ return function(status, text)
             fields = {
                 {
                     name = "👤 User",
-                    value = "`" .. playerName .. "` (" .. userId .. ")",
+                    value = "`" .. playerName .. "`\n (" .. userId .. ")",
                     inline = true
                 },
                 {
-                    name = "⭐ Status",
+                    name = "Status",
                     value = "`" .. status .. "`",
                     inline = true
+                },
+                {
+                    name = "",
+                    value = "",
+                    inline = false
                 },
                 {
                     name = "🎮 Game",
@@ -102,9 +114,9 @@ return function(status, text)
                     inline = true
                 },
                 {
-                    name = "📍 Place/Job ID",
-                    value = "`" .. tostring(placeId) .. "/" .. tostring(jobId) .. "`",
-                    inline = false
+                    name = "📍 Place",
+                    value = "`" .. tostring(placeId) .. "`",
+                    inline = true
                 }
             },
             footer = {
