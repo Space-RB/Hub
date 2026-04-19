@@ -1,10 +1,10 @@
 local IDS = {
     -- Tower Defense Simulator
-    [5591597781] = "https://raw.githubusercontent.com/Space-RB/Premium/refs/heads/main/TDS-loader.lua", -- TDS | Game
-    [3260590327] = "https://raw.githubusercontent.com/Space-RB/Premium/refs/heads/main/TDS-loader.lua", -- TDS | Lobby
+    [5591597781] = "https://f.space-hub.cc/Scripts/TDS/TDS-loader.lua", -- TDS | Game
+    [3260590327] = "https://f.space-hub.cc/Scripts/TDS/TDS-loader.lua", -- TDS | Lobby
 }
 local Names = {
-    ["TDS"] = "https://raw.githubusercontent.com/Space-RB/Premium/refs/heads/main/TDS-loader.lua", -- Tower Defense Simulator
+    ["TDS"] = "https://f.space-hub.cc/Scripts/TDS/TDS-loader.lua", -- Tower Defense Simulator
 }
 
 local activeCount = 0
