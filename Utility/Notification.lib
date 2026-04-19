@@ -29,8 +29,42 @@ local TweenService, CoreGui, UserInputService, GuiService, RunService = Services
     "RunService"
 );
 
-local ProtectGui = protectgui or (syn and syn.protect_gui) or function() end;
-local GetHUI = gethui or function() return CoreGui; end;
+local StarterGui = game:GetService("StarterGui");
+
+local function ProtectGui(gui)
+    if typeof(gui) ~= "Instance" then
+        return;
+    end;
+
+    pcall(function()
+        if protectgui then
+            protectgui(gui);
+        elseif syn and syn.protect_gui then
+            syn.protect_gui(gui);
+        end;
+    end);
+end
+
+local function GetHUI()
+    if type(gethui) == "function" then
+        local ok, hui = pcall(gethui);
+        if ok and typeof(hui) == "Instance" then
+            return hui;
+        end;
+    end;
+
+    return CoreGui;
+end
+
+local function sendFallbackNotification(kind, title, text, duration)
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = tostring(title or "Notification");
+            Text = tostring(kind or "Info") .. ": " .. tostring(text or "");
+            Duration = tonumber(duration) or SETTINGS.Duration;
+        });
+    end);
+end
 
 local NotificationSystem = {};
 NotificationSystem.__index = NotificationSystem;
@@ -100,7 +134,13 @@ if IS_MOBILE then
 end;
 
 ProtectGui(Container);
-Container.Parent = GetHUI();
+
+local parent = GetHUI();
+if typeof(parent) ~= "Instance" then
+    parent = CoreGui;
+end;
+
+Container.Parent = parent;
 
 local ActiveNotifications = {};
 
@@ -497,13 +537,22 @@ function NotificationSystem:Create(options)
 end;
 
 function NotificationSystem:Notify(title, message, notificationType, duration, callback)
-    return self:Create({
-        Title = title;
-        Text = message;
-        Type = notificationType or "Info";
-        Duration = duration;
-        Callback = callback;
-    });
+    local ok, result = pcall(function()
+        return self:Create({
+            Title = title;
+            Text = message;
+            Type = notificationType or "Info";
+            Duration = duration;
+            Callback = callback;
+        });
+    end);
+
+    if ok then
+        return result;
+    end;
+
+    sendFallbackNotification(notificationType, title, message, duration);
+    return nil;
 end;
 
 function NotificationSystem:Info(title, message, duration, callback)
