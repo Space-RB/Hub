@@ -29,8 +29,6 @@ local TweenService, CoreGui, UserInputService, GuiService, RunService = Services
     "RunService"
 );
 
-local StarterGui = game:GetService("StarterGui");
-
 local function ProtectGui(gui)
     if typeof(gui) ~= "Instance" then
         return;
@@ -54,16 +52,6 @@ local function GetHUI()
     end;
 
     return CoreGui;
-end
-
-local function sendFallbackNotification(kind, title, text, duration)
-    pcall(function()
-        StarterGui:SetCore("SendNotification", {
-            Title = tostring(title or "Notification");
-            Text = tostring(kind or "Info") .. ": " .. tostring(text or "");
-            Duration = tonumber(duration) or SETTINGS.Duration;
-        });
-    end);
 end
 
 local NotificationSystem = {};
@@ -537,22 +525,13 @@ function NotificationSystem:Create(options)
 end;
 
 function NotificationSystem:Notify(title, message, notificationType, duration, callback)
-    local ok, result = pcall(function()
-        return self:Create({
-            Title = title;
-            Text = message;
-            Type = notificationType or "Info";
-            Duration = duration;
-            Callback = callback;
-        });
-    end);
-
-    if ok then
-        return result;
-    end;
-
-    sendFallbackNotification(notificationType, title, message, duration);
-    return nil;
+    return self:Create({
+        Title = title;
+        Text = message;
+        Type = notificationType or "Info";
+        Duration = duration;
+        Callback = callback;
+    });
 end;
 
 function NotificationSystem:Info(title, message, duration, callback)
@@ -598,4 +577,4 @@ Notifications:Warning("Clickable Warning", "Click me to trigger callback!", 15, 
     print("Notification was clicked!");
 end);]]
 
-return NotificationSystem.new();
+return NotificationSystem;
