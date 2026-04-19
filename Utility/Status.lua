@@ -1,4 +1,4 @@
-local Status = "Maintenance" -- Active/Maintenance
+local Status = "Active" -- Active/Maintenance
 local DiscordLink = "discord.gg/spacerb"
 
 print("[Space Hub]: " .. Status)
