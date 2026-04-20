@@ -1,61 +1,18 @@
 local IDS = {
-    -- Tower Defense Simulator
-    [5591597781] = "https://f.space-hub.cc/Scripts/TDS/TDS-loader.lua", -- TDS | Game
-    [3260590327] = "https://f.space-hub.cc/Scripts/TDS/TDS-loader.lua", -- TDS | Lobby
+    [5591597781] = "https://f.space-hub.cc/Scripts/TDS/TDS-loader.lua",           -- TDS | Game
+    [3260590327] = "https://f.space-hub.cc/Scripts/TDS/TDS-loader.lua",           -- TDS | Lobby
 }
+
 local Names = {
-    ["TDS"] = "https://f.space-hub.cc/Scripts/TDS/TDS-loader.lua", -- Tower Defense Simulator
+    ["TDS"] = "https://f.space-hub.cc/Scripts/TDS/TDS-loader.lua",                -- TDS
 }
 
-local activeCount = 0
-for _, url in pairs(IDS) do
-    if url and url ~= "" then
-        activeCount = activeCount + 1
-    end
+local function count(t)
+    local c = 0
+    for _, v in pairs(t) do if v and v ~= "" then c = c + 1 end end
+    return c
 end
 
-print(string.format("[Space Hub]: Loaded %d active script mappings. Total entries: %d", activeCount, table.getn(IDS) or 0))
-
-local activeCount = 0
-local function countActiveScripts()
-    for _, url in pairs(Names) do
-        if url and url ~= "" then
-            activeCount = activeCount + 1
-        end
-    end
-    return activeCount
-end
-
-print(string.format("[Space Hub]: Loaded NAMES list with %d active scripts. Total entries: %d", countActiveScripts(), table.getn(Names) or 0))
-
-function Names:getInfo(scriptName)
-    local url = self[scriptName]
-    if url and url ~= "" then
-        return {
-            name = scriptName,
-            url = url,
-            active = true
-        }
-    elseif url == "" then
-        return {
-            name = scriptName,
-            url = nil,
-            active = false,
-            status = "disabled"
-        }
-    else
-        return nil
-    end
-end
-
-function Names:getActiveScripts()
-    local active = {}
-    for name, url in pairs(self) do
-        if type(name) == "string" and url and url ~= "" then
-            table.insert(active, name)
-        end
-    end
-    return active
-end
+print("[Space Hub]: IDS - " .. count(IDS) .. " | Names - " .. count(Names))
 
 return IDS, Names
