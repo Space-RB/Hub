@@ -1,6 +1,6 @@
 local IDS = {
-    [5591597781] = "https://f.space-hub.cc/Scripts/TDS/TDS-loader.lua",           -- TDS | Game
-    [3260590327] = "https://f.space-hub.cc/Scripts/TDS/TDS-loader.lua",           -- TDS | Lobby
+    [5591597781] = "https://f.space-hub.cc/Scripts/TDS/UI.lua",           -- TDS | Game
+    [3260590327] = "https://f.space-hub.cc/Scripts/TDS/UI.lua",           -- TDS | Lobby
 }
 
 local Names = {
