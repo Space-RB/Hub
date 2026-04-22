@@ -4,7 +4,7 @@ local IDS = {
 }
 
 local Names = {
-    ["TDS"] = "https://f.space-hub.cc/Scripts/TDS/TDS-loader.lua",                -- TDS
+    ["TDS"] = "https://f.space-hub.cc/Scripts/TDS/UI.lua",                -- TDS
 }
 
 local function count(t)
