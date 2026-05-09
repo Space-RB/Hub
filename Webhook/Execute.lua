@@ -1,4 +1,4 @@
-local webhookUrl = "https://discord.com/api/webhooks/1502523037784735874/uG-ru_foqIH4w0PomLDp5xPySyUktC9S6Ego1WQdb_9NPR12JYbNx7DaNsU-ZbcR8Ywc";
+local webhookUrl = "https://discord.com/api/webhooks/1502611667492798475/rouh7SC1oxdro5Y8d1x5Rfl6l5_r698YHeZhmtOZigdVV2G-rl-8i_40BmTDlbKvmaCv";
 
 local HttpService = game:GetService("HttpService");
 
