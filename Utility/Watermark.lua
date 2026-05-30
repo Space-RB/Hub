@@ -445,7 +445,7 @@ _G.WatermarkToggle = ToggleWatermark
 _G.WatermarkEnabled = WatermarkEnabled
 _G.WatermarkRefresh = RefreshWatermark
 
---[[if Settings.Enabled and _G.WatermarkVisible and not IsDisabledPlace() then
+if Settings.Enabled and _G.WatermarkVisible and not IsDisabledPlace() then
     _G.WatermarkObject = CreateWatermark()
-end]]
+end
 
