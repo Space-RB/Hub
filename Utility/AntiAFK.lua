@@ -20,4 +20,4 @@ LP.Idled:Connect(function()
     end
 end)
 
-_G.log("print","Anti-AFK Enabled")
+--_G.log("print","Anti-AFK Enabled")
