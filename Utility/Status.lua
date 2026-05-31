@@ -1,7 +1,7 @@
 local Status = "Active" -- Active/Maintenance
 local DiscordLink = "discord.gg/spacerb"
 
-print("[Space Hub]: " .. Status)
+--print("[Space Hub]: " .. Status)
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
